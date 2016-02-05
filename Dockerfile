@@ -19,7 +19,7 @@ ADD etc /etc
 RUN buildDeps=" build-base re2c file readline-dev autoconf binutils bison \
         libxml2-dev curl-dev freetype-dev openssl-dev \
         libjpeg-turbo-dev libpng-dev libwebp-dev libmcrypt-dev \
-        gmp-dev icu-dev" \
+        gmp-dev icu-dev libmemcached-dev" \
     && apk --update add $buildDeps \
 
     # download unpack php-src
@@ -34,7 +34,7 @@ RUN buildDeps=" build-base re2c file readline-dev autoconf binutils bison \
         --prefix=/usr \
         --sysconfdir=/etc/php \
         --with-config-file-path=/etc/php \
-        --with-config-file-scan-dir=/etc/php \
+        --with-config-file-scan-dir=/etc/php/conf.d \
         --enable-fpm --with-fpm-user=root --with-fpm-group=root \
         --enable-cli \
         --enable-mbstring \
@@ -50,7 +50,6 @@ RUN buildDeps=" build-base re2c file readline-dev autoconf binutils bison \
         --enable-soap \
         --enable-calendar \
         --enable-intl \
-        --enable-inline-optimization \
         --enable-json \
         --enable-dom \
         --enable-libxml --with-libxml-dir=/usr \
@@ -58,6 +57,9 @@ RUN buildDeps=" build-base re2c file readline-dev autoconf binutils bison \
         --enable-xmlreader \
         --enable-phar \
         --enable-session \
+        --enable-sysvmsg \
+        --enable-sysvsem \
+        --enable-sysvshm \
         --disable-cgi \
         --disable-debug \
         --disable-rpath \
@@ -84,6 +86,28 @@ RUN buildDeps=" build-base re2c file readline-dev autoconf binutils bison \
 
     # strip debug symbols from the binary (GREATLY reduces binary size)
     && strip -s /usr/bin/php \
+
+    # install xdebug (but it will be disabled, see /etc/php/conf.d/xdebug.ini)
+    && cd /tmp \
+    && git clone https://github.com/xdebug/xdebug.git \
+    && cd xdebug \
+    && git checkout master \
+    && phpize && ./configure --enable-xdebug && make \
+    && cp modules/xdebug.so /usr/lib/php/extensions/no-debug-non-zts-20151012 \
+
+    # install memcached for PHP 7 (not stable yet: 04.02.2016 - https://github.com/php-memcached-dev/php-memcached/issues/213)
+    # && cd /tmp \
+    # && git clone https://github.com/php-memcached-dev/php-memcached.git \
+    # && cd php-memcached \
+    # && git checkout php7 \
+    # && phpize && ./configure --disable-memcached-sasl && make && make install \
+
+    # phpredis is not on PECL
+    && cd /tmp \
+    && git clone https://github.com/phpredis/phpredis.git \
+    && cd phpredis \
+    && git checkout php7 \
+    && phpize && ./configure && make && make install \
 
     # remove PHP dev dependencies
     && apk del $buildDeps \
