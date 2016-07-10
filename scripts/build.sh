@@ -32,7 +32,7 @@ apk --update add ${BUILD_DEPS}
 
 # install mongodb
 pecl install mongodb
-php_update_mods
+echo "extension=mongodb.so" > /etc/php/mods/mongodb.ini
 enable_ext mongodb
 
 
